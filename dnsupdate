@@ -38,6 +38,13 @@ options:
     required: true
     default: null
     aliases: []
+  keyalgo:
+    description:
+      - TSIG key algorithm
+    required: false
+    default: 'hmac-md5'
+    choices: [ 'hmac-md5', 'hmac-sha1', 'hmac-sha224', 'hmac-sha256', 'hmac-sha384', 'hmac-sha512' ]
+    aliases: []
   mname:
     description:
       - address of the master server to which to send the update to.
@@ -103,17 +110,28 @@ try:
 except ImportError:
     HAS_DNSPYTHON=False
 
-def dns_update(keyname, secret, mname, zone, domain, a_rdata, txt_rdata=None, ttl=3600):
+def dns_update(keyname, secret, keyalgo, mname, zone, domain, a_rdata, txt_rdata=None, ttl=3600):
 
     success=False
     msg = ''
+    key_algorithms = {
+        'hmac-md5'   : 'HMAC-MD5.SIG-ALG.REG.INT',
+        'hmac-sha1'  : 'hmac-sha1.',
+        'hmac-sha224': 'hmac-sha224.',
+        'hmac-sha256': 'hmac-sha256.',
+        'hmac-sha384': 'hmac-sha384.',
+        'hmac-sha512': 'hmac-sha512.',
+    }
+
+    keyalgorithm = key_algorithms[keyalgo]
 
     keyring = dns.tsigkeyring.from_text({
             keyname : secret })
 
     update = dns.update.Update(zone,
                     keyring=keyring,
-                    keyname=keyname)
+                    keyname=keyname,
+                    keyalgorithm=keyalgorithm)
     update.replace(domain, ttl, 'A', a_rdata)
     if txt_rdata is not None:
         update.replace(domain, ttl, 'TXT', txt_rdata)
@@ -124,12 +142,17 @@ def dns_update(keyname, secret, mname, zone, domain, a_rdata, txt_rdata=None, tt
     except dns.tsig.PeerBadKey:
         return False, 'BADKEY'
         pass
+    except dns.tsig.PeerBadSignature:
+        return False, 'BADPEERSIG'
+        pass
     except dns.exception.Timeout:
         return False, 'TIMEOUT'
         pass
 
     if success:
         msg = dns.rcode.to_text(response.rcode())
+        if msg == 'REFUSED':
+            return False, 'REFUSED'
     return True, msg
 
 
@@ -147,7 +170,10 @@ def main():
                 domain = dict(required=True),
                 a_rdata = dict(required=True),
                 txt_rdata = dict(required=False),
-                ttl = dict(default=60, required=False)
+                ttl = dict(default=60, required=False),
+                keyalgo = dict(default='hmac-md5', choices=[
+                     'hmac-md5', 'hmac-sha1', 'hmac-sha224',
+                     'hmac-sha256', 'hmac-sha384', 'hmac-sha512' ]),
         )
     )
 
@@ -162,10 +188,12 @@ def main():
     a_rdata   = module.params['a_rdata']
     txt_rdata   = module.params['txt_rdata']
     ttl   = module.params['ttl']
+    keyalgo = module.params['keyalgo']
+
 
     changed=False
 
-    r, msg = dns_update(keyname, secret, mname, zone, domain, a_rdata, txt_rdata)
+    r, msg = dns_update(keyname, secret, keyalgo, mname, zone, domain, a_rdata, txt_rdata, ttl)
 
     if r == False or msg == 'NOTAUTH':
         module.fail_json(msg='DNS update on %s failed: %s (%s)' % (mname, msg, zone))

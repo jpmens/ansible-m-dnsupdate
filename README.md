@@ -1,3 +1,4 @@
+ processing module source ---> /etc/ansible/dnsupdate/library/dnsupdate
 ## dnsupdate
 
 New in version 0.9.
@@ -25,6 +26,13 @@ This module performs dynamic DNS updates as per RFC 2136.
 <td></td>
 <td><ul></ul></td>
 <td>name of the authoritative zone (e.g. example.com)</td>
+</tr>
+<tr>
+<td>keyalgo</td>
+<td>no</td>
+<td>hmac-md5</td>
+<td><ul><li>hmac-md5</li><li>hmac-sha1</li><li>hmac-sha224</li><li>hmac-sha256</li><li>hmac-sha384</li><li>hmac-sha512</li></ul></td>
+<td>TSIG key algorithm</td>
 </tr>
 <tr>
 <td>mname</td>
