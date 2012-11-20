@@ -1,4 +1,3 @@
- processing module source ---> /etc/ansible/dnsupdate/library/dnsupdate
 ## dnsupdate
 
 New in version 0.9.
