@@ -41,6 +41,13 @@ This module performs dynamic DNS updates as per RFC 2136.
 <td>address of the master server to which to send the update to. This module does not currently determine the <em>mname</em> from the zone's SOA record.</td>
 </tr>
 <tr>
+<td>secret</td>
+<td>yes</td>
+<td></td>
+<td><ul></ul></td>
+<td>secret TSIG key blob (base-64 encoded)</td>
+</tr>
+<tr>
 <td>a_rdata</td>
 <td>yes</td>
 <td></td>
@@ -48,11 +55,11 @@ This module performs dynamic DNS updates as per RFC 2136.
 <td>The <em>rdata</em> for the A resource record type (i.e. an IPv4 address)</td>
 </tr>
 <tr>
-<td>secret</td>
-<td>yes</td>
-<td></td>
-<td><ul></ul></td>
-<td>secret TSIG key blob (base-64 encoded)</td>
+<td>add</td>
+<td>no</td>
+<td>no</td>
+<td><ul><li>yes</li><li>no</li></ul></td>
+<td>Whether to add this record to existing records or not. no means replace.</td>
 </tr>
 <tr>
 <td>keyname</td>

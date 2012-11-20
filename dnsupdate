@@ -84,6 +84,13 @@ options:
     required: true
     default: 3600
     aliases: []
+  add:
+    description:
+      - Whether to add this record to existing records or not. C(no) means replace.
+    required: false
+    default: 'no'
+    choices: ['yes','no']
+    aliases: []
 examples:
    - code: |
        local_action: dnsupdate keyname="mykey1"
@@ -110,7 +117,7 @@ try:
 except ImportError:
     HAS_DNSPYTHON=False
 
-def dns_update(keyname, secret, keyalgo, mname, zone, domain, a_rdata, txt_rdata=None, ttl=3600):
+def dns_update(keyname, secret, keyalgo, mname, zone, domain, add, a_rdata, txt_rdata=None, ttl=3600):
 
     success=False
     msg = ''
@@ -132,9 +139,15 @@ def dns_update(keyname, secret, keyalgo, mname, zone, domain, a_rdata, txt_rdata
                     keyring=keyring,
                     keyname=keyname,
                     keyalgorithm=keyalgorithm)
-    update.replace(domain, ttl, 'A', a_rdata)
+    if add == 'yes':
+        update.add(domain, ttl, 'A', a_rdata)
+    else:
+        update.replace(domain, ttl, 'A', a_rdata)
     if txt_rdata is not None:
-        update.replace(domain, ttl, 'TXT', txt_rdata)
+        if add == 'yes':
+            update.add(domain, ttl, 'TXT', txt_rdata)
+        else:
+            update.replace(domain, ttl, 'TXT', txt_rdata)
 
     try:
         response = dns.query.udp(update, mname, timeout=10)
@@ -174,26 +187,28 @@ def main():
                 keyalgo = dict(default='hmac-md5', choices=[
                      'hmac-md5', 'hmac-sha1', 'hmac-sha224',
                      'hmac-sha256', 'hmac-sha384', 'hmac-sha512' ]),
+                add = dict(default='no', required=False, choices=[ "yes", "no" ]),
         )
     )
 
     if not HAS_DNSPYTHON:
         module.fail_json(msg="dnspython is not installed")
 
-    keyname  = module.params['keyname']
-    secret   = module.params['secret']
-    mname   = module.params['mname']
-    zone   = module.params['zone']
-    domain   = module.params['domain']
-    a_rdata   = module.params['a_rdata']
-    txt_rdata   = module.params['txt_rdata']
-    ttl   = module.params['ttl']
-    keyalgo = module.params['keyalgo']
+    keyname    = module.params['keyname']
+    secret     = module.params['secret']
+    mname      = module.params['mname']
+    zone       = module.params['zone']
+    domain     = module.params['domain']
+    a_rdata    = module.params['a_rdata']
+    txt_rdata  = module.params['txt_rdata']
+    ttl        = module.params['ttl']
+    keyalgo    = module.params['keyalgo']
+    add        = module.params['add']
 
 
     changed=False
 
-    r, msg = dns_update(keyname, secret, keyalgo, mname, zone, domain, a_rdata, txt_rdata, ttl)
+    r, msg = dns_update(keyname, secret, keyalgo, mname, zone, domain, add, a_rdata, txt_rdata, ttl)
 
     if r == False or msg == 'NOTAUTH':
         module.fail_json(msg='DNS update on %s failed: %s (%s)' % (mname, msg, zone))
