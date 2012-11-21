@@ -65,13 +65,19 @@ options:
     required: true
     default: null
     aliases: []
-  a_rdata:
+  a:
     description:
       - The I(rdata) for the A resource record type (i.e. an IPv4 address)
-    required: true
+    required: false
     default: null
     aliases: []
-  txt_rdata:
+  aaaa:
+    description:
+      - The I(rdata) for the AAAA resource record type (i.e. an IPv6 address)
+    required: false
+    default: null
+    aliases: []
+  txt:
     description:
       - The I(rdata) for the TXT resource record type. Space-separated strings
         are encoded as per DNS rules.
@@ -84,12 +90,15 @@ options:
     required: true
     default: 3600
     aliases: []
-  add:
+  op:
     description:
-      - Whether to add this record to existing records or not. C(no) means replace.
+      - Operation to perform. C(add) adds the specified RR to the RRset, C(del)
+        deletes the specified RRset and C(replace) replaces the RRset with the RRs.
+        If the operation is C(delete), the value of the RR is not verified as the
+        B(whole) RRset is deleted from the DNS.
     required: false
     default: 'no'
-    choices: ['yes','no']
+    choices: ['add','delete', 'replace']
     aliases: []
 examples:
    - code: |
@@ -98,7 +107,8 @@ examples:
                   mname=192.168.1.10
                   zone=example.org
                   domain=www
-                  a_rdata=${ec2_ip_address}
+                  a=${ec2_ip_address}
+                  op=add
      description: "Example from Ansible Playbooks"
 notes:
   - This module requires I(dnspython) (U(http://www.dnspython.org/)), and it will
@@ -117,7 +127,7 @@ try:
 except ImportError:
     HAS_DNSPYTHON=False
 
-def dns_update(keyname, secret, keyalgo, mname, zone, domain, add, a_rdata, txt_rdata=None, ttl=3600):
+def dns_update(keyname, secret, keyalgo, mname, zone, domain, op, a, aaaa, txt=None, ttl=3600):
 
     success=False
     msg = ''
@@ -139,15 +149,29 @@ def dns_update(keyname, secret, keyalgo, mname, zone, domain, add, a_rdata, txt_
                     keyring=keyring,
                     keyname=keyname,
                     keyalgorithm=keyalgorithm)
-    if add == 'yes':
-        update.add(domain, ttl, 'A', a_rdata)
+    if op == 'add':
+        if a is not None:
+            update.add(domain, ttl, 'A', a)
+        if aaaa is not None:
+            update.add(domain, ttl, 'AAAA', aaaa)
+        if txt is not None:
+            update.add(domain, ttl, 'TXT', txt)
+    elif op == 'delete':
+        if a is not None:
+            update.delete(domain, 'A')
+        if aaaa is not None:
+            update.delete(domain, 'AAAA')
+        if txt is not None:
+            update.delete(domain, 'TXT')
+    elif op == 'replace':
+        if a is not None:
+            update.replace(domain, ttl, 'A', a)
+        if aaaa is not None:
+            update.replace(domain, ttl, 'AAAA', aaaa)
+        if txt is not None:
+            update.replace(domain, ttl, 'TXT', txt)
     else:
-        update.replace(domain, ttl, 'A', a_rdata)
-    if txt_rdata is not None:
-        if add == 'yes':
-            update.add(domain, ttl, 'TXT', txt_rdata)
-        else:
-            update.replace(domain, ttl, 'TXT', txt_rdata)
+        return False, 'UNKNOWNOPERATION'
 
     try:
         response = dns.query.udp(update, mname, timeout=10)
@@ -181,13 +205,14 @@ def main():
                 mname = dict(required=True),
                 zone = dict(required=True),
                 domain = dict(required=True),
-                a_rdata = dict(required=True),
-                txt_rdata = dict(required=False),
+                a = dict(required=False),
+                aaaa = dict(required=False),
+                txt = dict(required=False),
                 ttl = dict(default=60, required=False),
                 keyalgo = dict(default='hmac-md5', choices=[
                      'hmac-md5', 'hmac-sha1', 'hmac-sha224',
                      'hmac-sha256', 'hmac-sha384', 'hmac-sha512' ]),
-                add = dict(default='no', required=False, choices=[ "yes", "no" ]),
+                op = dict(default='add', required=False, choices=[ 'add', 'delete', 'replace' ]),
         )
     )
 
@@ -199,16 +224,17 @@ def main():
     mname      = module.params['mname']
     zone       = module.params['zone']
     domain     = module.params['domain']
-    a_rdata    = module.params['a_rdata']
-    txt_rdata  = module.params['txt_rdata']
+    a          = module.params['a']
+    aaaa       = module.params['aaaa']
+    txt        = module.params['txt']
     ttl        = module.params['ttl']
     keyalgo    = module.params['keyalgo']
-    add        = module.params['add']
+    op         = module.params['op']
 
 
     changed=False
 
-    r, msg = dns_update(keyname, secret, keyalgo, mname, zone, domain, add, a_rdata, txt_rdata, ttl)
+    r, msg = dns_update(keyname, secret, keyalgo, mname, zone, domain, op, a, aaaa, txt, ttl)
 
     if r == False or msg == 'NOTAUTH':
         module.fail_json(msg='DNS update on %s failed: %s (%s)' % (mname, msg, zone))
