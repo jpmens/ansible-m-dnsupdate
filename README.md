@@ -85,7 +85,7 @@ This module performs dynamic DNS updates as per RFC 2136.
 <tr>
 <td>op</td>
 <td>no</td>
-<td>no</td>
+<td>add</td>
 <td><ul><li>add</li><li>delete</li><li>replace</li></ul></td>
 <td>Operation to perform. add adds the specified RR to the RRset, del deletes the specified RRset and replace replaces the RRset with the RRs. If the operation is delete, the value of the RR is not verified as the <b>whole</b> RRset is deleted from the DNS.</td>
 </tr>

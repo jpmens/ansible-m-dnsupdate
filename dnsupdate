@@ -97,7 +97,7 @@ options:
         If the operation is C(delete), the value of the RR is not verified as the
         B(whole) RRset is deleted from the DNS.
     required: false
-    default: 'no'
+    default: 'add'
     choices: ['add','delete', 'replace']
     aliases: []
 examples:
