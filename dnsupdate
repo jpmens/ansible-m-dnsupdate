@@ -77,6 +77,12 @@ options:
     required: false
     default: null
     aliases: []
+  cname:
+    description:
+      - The I(rdata) for the CNAME resource record type (i.e. C(example.com))
+    required: false
+    default: null
+    aliases: []
   txt:
     description:
       - The I(rdata) for the TXT resource record type. Space-separated strings
@@ -127,7 +133,7 @@ try:
 except ImportError:
     HAS_DNSPYTHON=False
 
-def dns_update(keyname, secret, keyalgo, mname, zone, domain, op, a, aaaa, txt=None, ttl=3600):
+def dns_update(keyname, secret, keyalgo, mname, zone, domain, op, a, aaaa, cname, txt=None, ttl=3600):
 
     success=False
     msg = ''
@@ -154,6 +160,8 @@ def dns_update(keyname, secret, keyalgo, mname, zone, domain, op, a, aaaa, txt=N
             update.add(domain, ttl, 'A', a)
         if aaaa is not None:
             update.add(domain, ttl, 'AAAA', aaaa)
+        if cname is not None:
+            update.add(domain, ttl, 'CNAME', cname)
         if txt is not None:
             update.add(domain, ttl, 'TXT', txt)
     elif op == 'delete':
@@ -161,6 +169,8 @@ def dns_update(keyname, secret, keyalgo, mname, zone, domain, op, a, aaaa, txt=N
             update.delete(domain, 'A')
         if aaaa is not None:
             update.delete(domain, 'AAAA')
+        if cname is not None:
+            update.delete(domain, 'CNAME')
         if txt is not None:
             update.delete(domain, 'TXT')
     elif op == 'replace':
@@ -168,6 +178,8 @@ def dns_update(keyname, secret, keyalgo, mname, zone, domain, op, a, aaaa, txt=N
             update.replace(domain, ttl, 'A', a)
         if aaaa is not None:
             update.replace(domain, ttl, 'AAAA', aaaa)
+        if cname is not None:
+            update.replace(domain, ttl, 'CNAME', cname)
         if txt is not None:
             update.replace(domain, ttl, 'TXT', txt)
     else:
@@ -207,6 +219,7 @@ def main():
                 domain = dict(required=True),
                 a = dict(required=False),
                 aaaa = dict(required=False),
+		cname = dict(required=False),
                 txt = dict(required=False),
                 ttl = dict(default=60, required=False),
                 keyalgo = dict(default='hmac-md5', choices=[
@@ -226,6 +239,7 @@ def main():
     domain     = module.params['domain']
     a          = module.params['a']
     aaaa       = module.params['aaaa']
+    cname      = module.params['cname']
     txt        = module.params['txt']
     ttl        = module.params['ttl']
     keyalgo    = module.params['keyalgo']
@@ -234,7 +248,7 @@ def main():
 
     changed=False
 
-    r, msg = dns_update(keyname, secret, keyalgo, mname, zone, domain, op, a, aaaa, txt, ttl)
+    r, msg = dns_update(keyname, secret, keyalgo, mname, zone, domain, op, a, aaaa, cname, txt, ttl)
 
     if r == False or msg == 'NOTAUTH':
         module.fail_json(msg='DNS update on %s failed: %s (%s)' % (mname, msg, zone))
