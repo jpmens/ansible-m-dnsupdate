@@ -90,6 +90,18 @@ options:
     required: false
     default: null
     aliases: []
+  rtype:
+    description:
+      - The type of DNS resource record to operate on
+    required: false
+    default: null
+    aliases: []
+  rdata:
+    description:
+      - The I(rdata) for the resource record specified by the rtype option
+    required: false
+    default: null
+    aliases: []
   ttl:
     description:
       - Time to Live for the RR.
@@ -133,7 +145,7 @@ try:
 except ImportError:
     HAS_DNSPYTHON=False
 
-def dns_update(keyname, secret, keyalgo, mname, zone, domain, op, a, aaaa, cname, txt=None, ttl=3600):
+def dns_update(keyname, secret, keyalgo, mname, zone, domain, op, a, aaaa, cname, txt=None, rtype=None, rdata=None, ttl=3600):
 
     success=False
     msg = ''
@@ -164,6 +176,9 @@ def dns_update(keyname, secret, keyalgo, mname, zone, domain, op, a, aaaa, cname
             update.add(domain, ttl, 'CNAME', cname)
         if txt is not None:
             update.add(domain, ttl, 'TXT', txt)
+        # Generic support for all other record types
+        if rtype is not None:
+            update.add(domain, ttl, rtype, rdata)
     elif op == 'delete':
         if a is not None:
             update.delete(domain, 'A')
@@ -173,6 +188,9 @@ def dns_update(keyname, secret, keyalgo, mname, zone, domain, op, a, aaaa, cname
             update.delete(domain, 'CNAME')
         if txt is not None:
             update.delete(domain, 'TXT')
+        # Generic support for all other record types
+        if rtype is not None:
+            update.delete(domain, rtype)
     elif op == 'replace':
         if a is not None:
             update.replace(domain, ttl, 'A', a)
@@ -182,6 +200,9 @@ def dns_update(keyname, secret, keyalgo, mname, zone, domain, op, a, aaaa, cname
             update.replace(domain, ttl, 'CNAME', cname)
         if txt is not None:
             update.replace(domain, ttl, 'TXT', txt)
+        # Generic support for all other record types
+        if rtype is not None:
+            update.replace(domain, ttl, rtype, rdata)
     else:
         return False, 'UNKNOWNOPERATION'
 
@@ -221,6 +242,8 @@ def main():
                 aaaa = dict(required=False),
 		cname = dict(required=False),
                 txt = dict(required=False),
+                rtype = dict(required=False),
+                rdata = dict(required=False),
                 ttl = dict(default=60, required=False),
                 keyalgo = dict(default='hmac-md5', choices=[
                      'hmac-md5', 'hmac-sha1', 'hmac-sha224',
@@ -239,16 +262,20 @@ def main():
     domain     = module.params['domain']
     a          = module.params['a']
     aaaa       = module.params['aaaa']
+    rtype      = module.params['rtype']
+    rdata      = module.params['rdata']
     cname      = module.params['cname']
     txt        = module.params['txt']
     ttl        = module.params['ttl']
     keyalgo    = module.params['keyalgo']
     op         = module.params['op']
 
+    if rtype is not None and rdata is None:
+        module.fail_json(msg="rdata is required if rtype is specified")
 
     changed=False
 
-    r, msg = dns_update(keyname, secret, keyalgo, mname, zone, domain, op, a, aaaa, cname, txt, ttl)
+    r, msg = dns_update(keyname, secret, keyalgo, mname, zone, domain, op, a, aaaa, cname, txt, rtype, rdata, ttl)
 
     if r == False or msg == 'NOTAUTH':
         module.fail_json(msg='DNS update on %s failed: %s (%s)' % (mname, msg, zone))
