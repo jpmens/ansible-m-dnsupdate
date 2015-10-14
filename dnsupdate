@@ -113,10 +113,11 @@ options:
       - Operation to perform. C(add) adds the specified RR to the RRset, C(del)
         deletes the specified RRset and C(replace) replaces the RRset with the RRs.
         If the operation is C(delete), the value of the RR is not verified as the
-        B(whole) RRset is deleted from the DNS.
+        B(whole) RRset is deleted from the DNS.  If you want to delete only a record
+        with a matching RR value, use C(delete-matching).
     required: false
     default: 'add'
-    choices: ['add','delete', 'replace']
+    choices: ['add','delete', 'delete-matching', 'replace']
     aliases: []
 examples:
    - code: |
@@ -191,6 +192,18 @@ def dns_update(keyname, secret, keyalgo, mname, zone, domain, op, a, aaaa, cname
         # Generic support for all other record types
         if rtype is not None:
             update.delete(domain, rtype)
+    elif op == 'delete-matching':
+        if a is not None:
+            update.delete(domain, 'A', a)
+        if aaaa is not None:
+            update.delete(domain, 'AAAA', aaaa)
+        if cname is not None:
+            update.delete(domain, 'CNAME', cname)
+        if txt is not None:
+            update.delete(domain, 'TXT', txt)
+        # Generic support for all other record types
+        if rtype is not None:
+            update.delete(domain, rtype, rdata)
     elif op == 'replace':
         if a is not None:
             update.replace(domain, ttl, 'A', a)
@@ -248,7 +261,7 @@ def main():
                 keyalgo = dict(default='hmac-md5', choices=[
                      'hmac-md5', 'hmac-sha1', 'hmac-sha224',
                      'hmac-sha256', 'hmac-sha384', 'hmac-sha512' ]),
-                op = dict(default='add', required=False, choices=[ 'add', 'delete', 'replace' ]),
+                op = dict(default='add', required=False, choices=[ 'add', 'delete', 'delete-matching', 'replace' ]),
         )
     )
 
