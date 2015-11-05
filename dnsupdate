@@ -257,7 +257,7 @@ def main():
                 txt = dict(required=False),
                 rtype = dict(required=False),
                 rdata = dict(required=False),
-                ttl = dict(default=60, required=False),
+                ttl = dict(default=3600, required=False),
                 keyalgo = dict(default='hmac-md5', choices=[
                      'hmac-md5', 'hmac-sha1', 'hmac-sha224',
                      'hmac-sha256', 'hmac-sha384', 'hmac-sha512' ]),
