@@ -83,6 +83,27 @@ This module performs dynamic DNS updates as per RFC 2136.
 <td>The <em>rdata</em> for the TXT resource record type. Space-separated strings are encoded as per DNS rules.</td>
 </tr>
 <tr>
+<td>cname</td>
+<td>no</td>
+<td></td>
+<td><ul></ul></td>
+<td>The <em>rdata</em> for the CNAME resource record type (e.g. example.com)</td>
+</tr>
+<tr>
+<td>rtype</td>
+<td>no</td>
+<td></td>
+<td><ul></ul></td>
+<td>The type of DNS resource record to operate on</td>
+</tr>
+<td>rdata</td>
+<td>no</td>
+<td></td>
+<td><ul></ul></td>
+<td>The <em>rdata</em> for the resource record specified by the rtype option</td>
+</tr>
+</tr>
+<tr>
 <td>op</td>
 <td>no</td>
 <td>add</td>
